@@ -27,6 +27,10 @@ log = logging.getLogger(__name__)
 RAPIDAPI_KEY       = os.environ["RAPIDAPI_KEY"]
 TELEGRAM_TOKEN     = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID   = os.environ["TELEGRAM_CHAT_ID"]
+
+BALE_TOKEN         = os.environ.get("BALE_BOT_TOKEN", "")
+BALE_CHAT_ID       = os.environ.get("BALE_CHAT_ID", "")
+
 GSHEET_CREDENTIALS = os.environ.get("GSHEET_CREDENTIALS", "")   # JSON string
 GSHEET_ID          = os.environ.get("GSHEET_ID", "")
 GSHEET_SHEET_NAME  = "Jobs"
@@ -174,7 +178,32 @@ def send_telegram(text: str) -> bool:
     except Exception as e:
         log.error(f"Telegram send exception: {e}")
         return False
+def send_bale(text: str) -> bool:
+    """ارسال پیام به بله فقط برای چت آیدی مشخص‌شده در Secret"""
+    if not BALE_TOKEN or not BALE_CHAT_ID:
+        log.info("Bale token/chat_id not set — skipping Bale")
+        return False
 
+    url = f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendMessage"
+
+    payload = {
+        "chat_id": BALE_CHAT_ID,
+        "text": text,
+    }
+
+    try:
+        resp = requests.post(url, json=payload, timeout=15)
+
+        if not resp.ok:
+            log.error(f"Bale error {resp.status_code}: {resp.text[:300]}")
+            return False
+
+        return True
+
+    except Exception as e:
+        log.error(f"Bale send exception: {e}")
+        return False
+        
 
 def extract_salary(job: dict) -> str:
     """استخراج حقوق از فیلدهای مختلف API"""
@@ -225,6 +254,33 @@ def format_job(job: dict) -> str:
 
     return "\n".join(lines)
 
+def format_job_for_bale(job: dict) -> str:
+    """ساخت متن ساده و سازگار با بله"""
+    title    = job.get("job_title") or "بدون عنوان"
+    company  = job.get("employer_name") or "نامشخص"
+    city     = job.get("job_city") or ""
+    country  = job.get("job_country") or ""
+    location = f"{city}, {country}".strip(", ") or "Remote"
+    source   = job.get("job_publisher") or ""
+    link     = job.get("job_apply_link") or job.get("job_google_link") or ""
+    salary   = extract_salary(job)
+
+    lines = [
+        f"💼 {title}",
+        f"🏢 {company}",
+        f"📍 {location}",
+    ]
+
+    if salary:
+        lines.append(f"💰 {salary}")
+
+    if source:
+        lines.append(f"🌐 {source}")
+
+    if link:
+        lines.append(f"🔗 Apply Now:\n{link}")
+
+    return "\n".join(lines)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Google Sheets (اختیاری)
@@ -355,36 +411,65 @@ def main():
     log.info(f"Summary → new: {len(unique_jobs)} | blacklisted: {blacklisted} | already seen: {already_seen} | errors: {errors}")
 
     # ─── ارسال به تلگرام ───────────────────────────────────────────────────
-    if not unique_jobs:
-        send_telegram(
-            f"🔍 <b>گزارش روزانه</b>\n"
-            f"📅 {now}\n\n"
-            f"✅ آگهی جدیدی امروز پیدا نشد.\n"
-            f"⛔ فیلتر شده: {blacklisted} | 🔁 تکراری: {already_seen}"
-        )
-        save_seen_jobs(seen_jobs)
-        return
+if not unique_jobs:
+    telegram_text = (
+        f"🔍 <b>گزارش روزانه</b>\n"
+        f"📅 {now}\n\n"
+        f"✅ آگهی جدیدی امروز پیدا نشد.\n"
+        f"⛔ فیلتر شده: {blacklisted} | 🔁 تکراری: {already_seen}"
+    )
+
+    bale_text = (
+        f"🔍 گزارش روزانه\n"
+        f"📅 {now}\n\n"
+        f"✅ آگهی جدیدی امروز پیدا نشد.\n"
+        f"⛔ فیلتر شده: {blacklisted} | 🔁 تکراری: {already_seen}"
+    )
+
+    send_telegram(telegram_text)
+    send_bale(bale_text)
+
+    save_seen_jobs(seen_jobs)
+    return
 
     # پیام هدر
-    send_telegram(
-        f"🔍 <b>آگهی‌های شغلی جدید</b>\n"
-        f"📅 {now}\n"
-        f"📊 {len(unique_jobs)} آگهی جدید | ⛔ {blacklisted} فیلتر شد\n"
-        f"➖➖➖➖➖➖➖➖"
-    )
-    time.sleep(1)
+telegram_header = (
+    f"🔍 <b>آگهی‌های شغلی جدید</b>\n"
+    f"📅 {now}\n"
+    f"📊 {len(unique_jobs)} آگهی جدید | ⛔ {blacklisted} فیلتر شد\n"
+    f"➖➖➖➖➖➖➖➖"
+)
 
-    sent = 0
-    for job in unique_jobs[:MAX_JOBS_PER_RUN]:
-        try:
-            msg = format_job(job)
-            if send_telegram(msg):
-                sent += 1
-                append_to_sheet(sheets_client, job)
-            time.sleep(0.8)   # جلوگیری از flood limit تلگرام
-        except Exception as e:
-            log.error(f"Error sending job to Telegram: {e}")
-            continue
+bale_header = (
+    f"🔍 آگهی‌های شغلی جدید\n"
+    f"📅 {now}\n"
+    f"📊 {len(unique_jobs)} آگهی جدید | ⛔ {blacklisted} فیلتر شد\n"
+    f"➖➖➖➖➖➖➖➖"
+)
+
+send_telegram(telegram_header)
+send_bale(bale_header)
+
+time.sleep(1)
+
+sent = 0
+for job in unique_jobs[:MAX_JOBS_PER_RUN]:
+    try:
+        telegram_msg = format_job(job)
+        bale_msg = format_job_for_bale(job)
+
+        telegram_ok = send_telegram(telegram_msg)
+        bale_ok = send_bale(bale_msg)
+
+        if telegram_ok or bale_ok:
+            sent += 1
+            append_to_sheet(sheets_client, job)
+
+        time.sleep(0.8)   # جلوگیری از flood limit
+
+    except Exception as e:
+        log.error(f"Error sending job notification: {e}")
+        continue
 
     save_seen_jobs(seen_jobs)
     log.info(f"═══ Done. Sent {sent}/{len(unique_jobs)} jobs ═══")
