@@ -345,7 +345,6 @@ def append_to_sheet(client, job: dict) -> None:
     except Exception as e:
         log.error(f"Sheet append error: {e}")
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # Main
 # ══════════════════════════════════════════════════════════════════════════════
@@ -408,9 +407,14 @@ def main():
             dedup_seen.add(jid)
             unique_jobs.append(job)
 
-    log.info(f"Summary → new: {len(unique_jobs)} | blacklisted: {blacklisted} | already seen: {already_seen} | errors: {errors}")
+    log.info(
+        f"Summary → new: {len(unique_jobs)} | "
+        f"blacklisted: {blacklisted} | "
+        f"already seen: {already_seen} | "
+        f"errors: {errors}"
+    )
 
-    # ─── ارسال به تلگرام ───────────────────────────────────────────────────
+    # ─── اگر آگهی جدیدی نبود ───────────────────────────────────────────────
     if not unique_jobs:
         telegram_text = (
             f"🔍 <b>گزارش روزانه</b>\n"
@@ -432,44 +436,45 @@ def main():
         save_seen_jobs(seen_jobs)
         return
 
-    # پیام هدر
-telegram_header = (
-    f"🔍 <b>آگهی‌های شغلی جدید</b>\n"
-    f"📅 {now}\n"
-    f"📊 {len(unique_jobs)} آگهی جدید | ⛔ {blacklisted} فیلتر شد\n"
-    f"➖➖➖➖➖➖➖➖"
-)
+    # ─── پیام هدر ─────────────────────────────────────────────────────────
+    telegram_header = (
+        f"🔍 <b>آگهی‌های شغلی جدید</b>\n"
+        f"📅 {now}\n"
+        f"📊 {len(unique_jobs)} آگهی جدید | ⛔ {blacklisted} فیلتر شد\n"
+        f"➖➖➖➖➖➖➖➖"
+    )
 
-bale_header = (
-    f"🔍 آگهی‌های شغلی جدید\n"
-    f"📅 {now}\n"
-    f"📊 {len(unique_jobs)} آگهی جدید | ⛔ {blacklisted} فیلتر شد\n"
-    f"➖➖➖➖➖➖➖➖"
-)
+    bale_header = (
+        f"🔍 آگهی‌های شغلی جدید\n"
+        f"📅 {now}\n"
+        f"📊 {len(unique_jobs)} آگهی جدید | ⛔ {blacklisted} فیلتر شد\n"
+        f"➖➖➖➖➖➖➖➖"
+    )
 
-send_telegram(telegram_header)
-send_bale(bale_header)
+    send_telegram(telegram_header)
+    send_bale(bale_header)
 
-time.sleep(1)
+    time.sleep(1)
 
-sent = 0
-for job in unique_jobs[:MAX_JOBS_PER_RUN]:
-    try:
-        telegram_msg = format_job(job)
-        bale_msg = format_job_for_bale(job)
+    # ─── ارسال آگهی‌ها ────────────────────────────────────────────────────
+    sent = 0
+    for job in unique_jobs[:MAX_JOBS_PER_RUN]:
+        try:
+            telegram_msg = format_job(job)
+            bale_msg = format_job_for_bale(job)
 
-        telegram_ok = send_telegram(telegram_msg)
-        bale_ok = send_bale(bale_msg)
+            telegram_ok = send_telegram(telegram_msg)
+            bale_ok = send_bale(bale_msg)
 
-        if telegram_ok or bale_ok:
-            sent += 1
-            append_to_sheet(sheets_client, job)
+            if telegram_ok or bale_ok:
+                sent += 1
+                append_to_sheet(sheets_client, job)
 
-        time.sleep(0.8)   # جلوگیری از flood limit
+            time.sleep(0.8)   # جلوگیری از flood limit
 
-    except Exception as e:
-        log.error(f"Error sending job notification: {e}")
-        continue
+        except Exception as e:
+            log.error(f"Error sending job notification: {e}")
+            continue
 
     save_seen_jobs(seen_jobs)
     log.info(f"═══ Done. Sent {sent}/{len(unique_jobs)} jobs ═══")
