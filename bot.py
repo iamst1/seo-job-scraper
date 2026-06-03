@@ -411,26 +411,26 @@ def main():
     log.info(f"Summary → new: {len(unique_jobs)} | blacklisted: {blacklisted} | already seen: {already_seen} | errors: {errors}")
 
     # ─── ارسال به تلگرام ───────────────────────────────────────────────────
-if not unique_jobs:
-    telegram_text = (
-        f"🔍 <b>گزارش روزانه</b>\n"
-        f"📅 {now}\n\n"
-        f"✅ آگهی جدیدی امروز پیدا نشد.\n"
-        f"⛔ فیلتر شده: {blacklisted} | 🔁 تکراری: {already_seen}"
-    )
+    if not unique_jobs:
+        telegram_text = (
+            f"🔍 <b>گزارش روزانه</b>\n"
+            f"📅 {now}\n\n"
+            f"✅ آگهی جدیدی امروز پیدا نشد.\n"
+            f"⛔ فیلتر شده: {blacklisted} | 🔁 تکراری: {already_seen}"
+        )
 
-    bale_text = (
-        f"🔍 گزارش روزانه\n"
-        f"📅 {now}\n\n"
-        f"✅ آگهی جدیدی امروز پیدا نشد.\n"
-        f"⛔ فیلتر شده: {blacklisted} | 🔁 تکراری: {already_seen}"
-    )
+        bale_text = (
+            f"🔍 گزارش روزانه\n"
+            f"📅 {now}\n\n"
+            f"✅ آگهی جدیدی امروز پیدا نشد.\n"
+            f"⛔ فیلتر شده: {blacklisted} | 🔁 تکراری: {already_seen}"
+        )
 
-    send_telegram(telegram_text)
-    send_bale(bale_text)
+        send_telegram(telegram_text)
+        send_bale(bale_text)
 
-    save_seen_jobs(seen_jobs)
-    return
+        save_seen_jobs(seen_jobs)
+        return
 
     # پیام هدر
 telegram_header = (
