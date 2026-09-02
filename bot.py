@@ -446,6 +446,10 @@ def main():
         try:
             jobs = search_jobs(query)
             log.info(f"→ {len(jobs)} raw results")
+            for j in jobs[:3]:
+                log.info(
+                f"RAW JOB: {j.get('job_title')} | {j.get('employer_name')} | {j.get('job_posted_at_datetime_utc')}"
+            )
 
             for job in jobs:
                 try:
