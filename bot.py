@@ -445,11 +445,15 @@ def main():
 
         try:
             jobs = search_jobs(query)
+            if len(jobs) == 0:
+                log.warning(f"NO RESULTS FROM API FOR QUERY: {query}")
             log.info(f"→ {len(jobs)} raw results")
+            log.warning(f"RAW COUNT FOR {query}: {len(jobs)}")
+            
             for j in jobs[:3]:
-                log.info(
-                f"RAW JOB: {j.get('job_title')} | {j.get('employer_name')} | {j.get('job_posted_at_datetime_utc')}"
-            )
+                log.warning(
+                    f"RAW JOB => {j.get('job_title')} | {j.get('employer_name')} | {j.get('job_publisher')}"
+                )
 
             for job in jobs:
                 try:
