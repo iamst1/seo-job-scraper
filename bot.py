@@ -1,5 +1,5 @@
 """
-SEO Job Scraper Bot v5.0
+SEO Job Scraper Bot v5.1
 ========================
 منابع رایگان:
   • Remotive.com
