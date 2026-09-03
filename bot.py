@@ -106,16 +106,18 @@ def save_seen_jobs(seen: set) -> None:
 
 def search_jobs(query: str, retries: int = 3) -> list:
     """جستجو با retry خودکار و مدیریت rate limit"""
-    url = "https://jsearch.p.rapidapi.com/search"
+    url = "https://jsearch.p.rapidapi.com/search-v2"
 
     headers = {
         "x-rapidapi-key": RAPIDAPI_KEY,
         "x-rapidapi-host": "jsearch.p.rapidapi.com",
+        "Content-Type": "application/json",
     }
 
     params = {
         "query": query,
         "num_pages": "1",
+        "country": "us",
         "date_posted": "3days",
         "work_from_home": "true",
     }
