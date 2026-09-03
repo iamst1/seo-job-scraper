@@ -142,15 +142,21 @@ def search_jobs(query: str, retries: int = 3) -> list:
                 log.warning(f"API non-OK for '{query}': {data.get('error')}")
                 return []
             
-            results = data.get("data", [])
+            results = data.get("data", {})
+
+            log.info(f"DEBUG data keys: {results.keys() if isinstance(results, dict) else type(results)}")
             
-            log.info(f"DEBUG data type: {type(results)}")
+            if isinstance(results, dict):
+                jobs = results.get("jobs", [])
+            else:
+                jobs = results
             
-            if results:
-                log.info(f"DEBUG first item type: {type(results[0])}")
-                log.info(f"DEBUG first item: {str(results[0])[:500]}")
+            log.info(f"DEBUG jobs count: {len(jobs)}")
             
-            return results
+            if jobs:
+                log.info(f"DEBUG first job: {str(jobs[0])[:500]}")
+            
+            return jobs
 
         except requests.exceptions.Timeout:
             log.warning(f"Timeout on attempt {attempt}/{retries} for '{query}'")
