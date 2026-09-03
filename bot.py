@@ -138,19 +138,19 @@ def search_jobs(query: str, retries: int = 3) -> list:
             resp.raise_for_status()
             data = resp.json()
 
-                if data.get("status") != "OK":
-                    log.warning(f"API non-OK for '{query}': {data.get('error')}")
-                    return []
-                
-                results = data.get("data", [])
-                
-                log.info(f"DEBUG data type: {type(results)}")
-                
-                if results:
-                    log.info(f"DEBUG first item type: {type(results[0])}")
-                    log.info(f"DEBUG first item: {str(results[0])[:500]}")
-                
-                return results
+            if data.get("status") != "OK":
+                log.warning(f"API non-OK for '{query}': {data.get('error')}")
+                return []
+            
+            results = data.get("data", [])
+            
+            log.info(f"DEBUG data type: {type(results)}")
+            
+            if results:
+                log.info(f"DEBUG first item type: {type(results[0])}")
+                log.info(f"DEBUG first item: {str(results[0])[:500]}")
+            
+            return results
 
         except requests.exceptions.Timeout:
             log.warning(f"Timeout on attempt {attempt}/{retries} for '{query}'")
