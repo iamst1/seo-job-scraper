@@ -53,6 +53,10 @@ SEARCH_QUERIES = [
     "SEO Content Editor remote",
     "SEO Python remote",
     "WordPress SEO Specialist remote",
+    "seo remote job",
+    "SEO specialist",
+    "SEO analyst",
+    "WordPress SEO",
 ]
 
 
@@ -118,10 +122,8 @@ def search_jobs(query: str, retries: int = 3) -> list:
         "query": query,
         "num_pages": "1",
         "country": "us",
-        "date_posted": "3days",
-        "work_from_home": "true",
+        "date_posted": "all",
     }
-
     for attempt in range(1, retries + 1):
         try:
             resp = requests.get(url, headers=headers, params=params, timeout=20)
